@@ -225,6 +225,13 @@ void get_unique_identifier(void) //Grab the unique identifier for each specific 
 
 void led_streaming(uint8_t *data) //Stream data from HID Packets to Keyboard.
 {
+    static uint32_t cycle_led_timer = 0;
+    static bool are_side_leds_on = true;
+    const static uint8_t side_led_indexes[16] = {
+        67, 70, 73, 76, 80, 83, 87, 91, // Left side
+        68, 71, 74, 77, 81, 84, 88, 92, // Right side
+    };
+
     uint8_t index = data[1];
     uint8_t numberofleds = data[2]; 
     #if defined(RGBLIGHT_ENABLE)
@@ -256,22 +263,50 @@ void led_streaming(uint8_t *data) //Stream data from HID Packets to Keyboard.
       //if ( (index + i) == CAPS_MAC_WIN_LED_INDEX && host_keyboard_led_state().caps_lock)   {
       //if ( (index + i) == CAPS_LOCK_LED_INDEX && host_keyboard_led_state().caps_lock)   {
       //if ( (index + i) == NUM_LOCK_LED_INDEX && host_keyboard_led_state().num_lock)  {
-      //#if defined(RGBLIGHT_ENABLE)
-      //rgblight_setrgb_at(255, 255, 255, index + i);
-      //#elif defined(RGB_MATRIX_ENABLE)
-      //rgb_matrix_set_color(index + i, 255, 255, 255);
-      //#endif
+      if (host_keyboard_led_state().caps_lock) {
+        //Blink timer
+        if (timer_elapsed32(cycle_led_timer) > 1000) {
+            are_side_leds_on = !are_side_leds_on;
+            cycle_led_timer = timer_read32();
+        }
 
-      //} else {
+        bool in_side_led_index = false;
+        for (uint8_t j = 0; j < ARRAY_SIZE(side_led_indexes); j++)
+        {
+            if((index + i) == side_led_indexes[j] ){
+                in_side_led_index = true;
+            }
+        }
+        if(in_side_led_index){ continue; }
+
+        if ((index + i) == CAPS_LOCK_LED_INDEX) {
+            for (uint8_t j = 0; j < ARRAY_SIZE(side_led_indexes); j++)
+            {
+                if (are_side_leds_on){
+                    #if defined(RGBLIGHT_ENABLE)
+                    rgblight_setrgb_at(0, 0, 0, side_led_indexes[j]);
+                    #elif defined(RGB_MATRIX_ENABLE)
+                    rgb_matrix_set_color(side_led_indexes[j], 0, 0, 0);
+                    #endif
+                } else {
+                    #if defined(RGBLIGHT_ENABLE)
+                    rgblight_setrgb_at(r, g, b, side_led_indexes[j]);
+                    #elif defined(RGB_MATRIX_ENABLE)
+                    rgb_matrix_set_color(side_led_indexes[j], r, g, b);
+                    #endif
+                }
+            }
+            return;
+        }
+      }
 
       #if defined(RGBLIGHT_ENABLE)
       rgblight_setrgb_at(r, g, b, index + i);
       #elif defined(RGB_MATRIX_ENABLE)
       rgb_matrix_set_color(index + i, r, g, b);
       #endif
-        }
      }
-//}
+}
 
 void signalrgb_mode_enable(void)
 {
