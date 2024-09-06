@@ -263,22 +263,37 @@ void led_streaming(uint8_t *data) //Stream data from HID Packets to Keyboard.
       //if ( (index + i) == CAPS_MAC_WIN_LED_INDEX && host_keyboard_led_state().caps_lock)   {
       //if ( (index + i) == CAPS_LOCK_LED_INDEX && host_keyboard_led_state().caps_lock)   {
       //if ( (index + i) == NUM_LOCK_LED_INDEX && host_keyboard_led_state().num_lock)  {
+      //#if defined(RGBLIGHT_ENABLE)
+      //rgblight_setrgb_at(255, 255, 255, index + i);
+      //#elif defined(RGB_MATRIX_ENABLE)
+      //rgb_matrix_set_color(index + i, 255, 255, 255);
+      //#endif
+
+      //
+      // Following information found here:
+      // https://docs.signalrgb.com/qmk/building-firmware-from-source#how-to-fix-your-indicator-leds-capslock-numlock-scroll-lock-blinks-when-signalrgb-and-the-key-are-active
+      //
+      // Not really a fan of how I've initially done this, but what is happening here is that the CAPS_LOCK determines wether or not the side LEDs are lit or not - they
+      // are essentially not in control of their own status. Because of this, we can skip the side LEDs if the CAPS_LOCK is on since their status would've already been
+      // determined (off or on). A timer controls the blink speed of the side LEDs. This works for what it was made for, but ultimately want to genericize it.
+      //
       if (host_keyboard_led_state().caps_lock) {
-        //Blink timer
-        if (timer_elapsed32(cycle_led_timer) > 1000) {
+        //Blink timer reset
+        if (timer_elapsed32(cycle_led_timer) > 750) { // milliseconds
             are_side_leds_on = !are_side_leds_on;
             cycle_led_timer = timer_read32();
         }
 
+        //Determine if currently looking at side LED or not
         bool in_side_led_index = false;
-        for (uint8_t j = 0; j < ARRAY_SIZE(side_led_indexes); j++)
-        {
+        for (uint8_t j = 0; j < ARRAY_SIZE(side_led_indexes); j++) {
             if((index + i) == side_led_indexes[j] ){
                 in_side_led_index = true;
             }
         }
         if(in_side_led_index){ continue; }
 
+        //Determine if currently looking at CAPS_LOCK
         if ((index + i) == CAPS_LOCK_LED_INDEX) {
             for (uint8_t j = 0; j < ARRAY_SIZE(side_led_indexes); j++)
             {
@@ -305,7 +320,7 @@ void led_streaming(uint8_t *data) //Stream data from HID Packets to Keyboard.
       #elif defined(RGB_MATRIX_ENABLE)
       rgb_matrix_set_color(index + i, r, g, b);
       #endif
-     }
+    }
 }
 
 void signalrgb_mode_enable(void)
