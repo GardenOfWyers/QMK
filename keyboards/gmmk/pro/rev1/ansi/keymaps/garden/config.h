@@ -17,5 +17,8 @@
 #pragma once
 
 
-/* Enable caps-lock LED */
+// Enable caps-lock LED
 #define CAPS_LOCK_LED_INDEX 3
+
+// Force n-key rollover
+#define FORCE_NKRO
